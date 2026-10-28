@@ -1,0 +1,23 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+**/application.properties
+**/secrets/
+**/*credentials*
+**/*secret*.json
+**/*secret*.properties
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# Dependencies and generated output
+**/node_modules/
+**/target/
+**/build/
+**/dist/
+**/coverage/
+*.log
+npm-debug.log*

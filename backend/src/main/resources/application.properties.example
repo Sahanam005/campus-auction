@@ -1,0 +1,14 @@
+spring.application.name=campus-auction
+
+server.port=8080
+
+spring.datasource.url=${DATABASE_URL:jdbc:mysql://localhost:3306/campus_auction}
+spring.datasource.username=${DATABASE_USERNAME}
+spring.datasource.password=${DATABASE_PASSWORD}
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+spring.jpa.open-in-view=false
+
+server.error.include-message=always
