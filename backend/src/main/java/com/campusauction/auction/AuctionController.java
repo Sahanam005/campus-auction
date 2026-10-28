@@ -1,13 +1,15 @@
 
 package com.campusauction.auction;
 
+import com.campusauction.auth.CurrentMarketplaceUser;
+import com.campusauction.auth.MarketplaceUser;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,13 +20,14 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auctions")
-@CrossOrigin(origins = "http://localhost:5173")
 public class AuctionController {
 
     private final AuctionService auctionService;
+    private final CurrentMarketplaceUser currentUser;
 
-    public AuctionController(AuctionService auctionService) {
+    public AuctionController(AuctionService auctionService, CurrentMarketplaceUser currentUser) {
         this.auctionService = auctionService;
+        this.currentUser = currentUser;
     }
 
     @GetMapping
@@ -37,18 +40,25 @@ public class AuctionController {
         return auctionService.getAuction(id);
     }
 
+    @GetMapping("/mine")
+    public List<Auction> getMyAuctions(Authentication authentication) {
+        return auctionService.getAuctionsForSeller(currentUser.require(authentication).getId());
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Auction createAuction(@Valid @RequestBody Auction auction) {
-        return auctionService.createAuction(auction);
+    public Auction createAuction(@Valid @RequestBody AuctionRequest request,
+            Authentication authentication) {
+        return auctionService.createAuction(request, currentUser.require(authentication));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public Auction createAuctionWithImage(
-            @Valid @RequestPart("auction") Auction auction,
-            @RequestPart("image") MultipartFile image) throws IOException {
-        return auctionService.createAuction(auction, image);
+            @Valid @RequestPart("auction") AuctionRequest request,
+            @RequestPart("image") MultipartFile image,
+            Authentication authentication) throws IOException {
+        return auctionService.createAuction(request, currentUser.require(authentication), image);
     }
 
     @GetMapping("/{id}/bids")
@@ -60,9 +70,10 @@ public class AuctionController {
     @ResponseStatus(HttpStatus.CREATED)
     public Bid placeBid(
             @PathVariable Long id,
-            @Valid @RequestBody BidRequest request) {
+            @Valid @RequestBody BidRequest request,
+            Authentication authentication) {
         return auctionService.placeBid(
-                id, request.bidderName(), request.amount());
+                id, currentUser.require(authentication), request.amount());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -73,7 +84,6 @@ public class AuctionController {
     }
 
     public record BidRequest(
-            @NotBlank String bidderName,
             @NotNull @DecimalMin("0.01") BigDecimal amount) {
     }
 }

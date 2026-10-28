@@ -1,6 +1,8 @@
 
 package com.campusauction.auction;
 
+import com.campusauction.auth.MarketplaceUser;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -36,6 +38,11 @@ public class Auction {
     @Column(nullable = false, length = 100)
     private String sellerName;
 
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seller_user_id")
+    private MarketplaceUser seller;
+
     @Column(length = 500)
     private String imageUrl;
 
@@ -56,6 +63,8 @@ public class Auction {
     public BigDecimal getMinIncrement() { return minIncrement; }
     public LocalDateTime getClosingTime() { return closingTime; }
     public String getSellerName() { return sellerName; }
+    @JsonIgnore
+    public Long getSellerUserId() { return seller == null ? null : seller.getId(); }
     public String getImageUrl() { return imageUrl; }
     public String getStatus() { return status; }
     public Long getVersion() { return version; }
@@ -68,6 +77,8 @@ public class Auction {
     public void setMinIncrement(BigDecimal v) { minIncrement = v; }
     public void setClosingTime(LocalDateTime v) { closingTime = v; }
     public void setSellerName(String v) { sellerName = v; }
+    @JsonIgnore
+    public void setSeller(MarketplaceUser v) { seller = v; }
     public void setImageUrl(String v) { imageUrl = v; }
     public void setStatus(String v) { status = v; }
 }

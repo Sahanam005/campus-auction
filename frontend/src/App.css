@@ -89,3 +89,28 @@
 
 .auction-card-image > img { position: relative; z-index: 1; }
 .detail-image { z-index: 1; }
+
+.nav-account { max-width: 150px; overflow: hidden; color: #b8afa9; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.nav-account-action { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; gap: 7px; padding: 0 9px; border: 1px solid rgba(255,255,255,.11); border-radius: 7px; background: transparent; color: #d3cbc5; font-size: 11px; }
+.nav-account-action:hover { border-color: rgba(255,200,87,.45); color: var(--color-gold); }
+.auth-page { max-width: 680px; }
+.auth-form { display: grid; gap: 16px; max-width: 560px; padding: 25px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: linear-gradient(145deg,rgba(23,21,20,.91),rgba(15,14,14,.95)); }
+.auth-form>label { display: grid; gap: 7px; color: #c9c0ba; font-size: 11px; font-weight: 600; }
+.auth-form input { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 7px; background: #131211; font-size: 13px; }
+.auth-hint { color: #938982; font-size: 10px; font-weight: 400; }
+.auth-submit { width: 100%; margin-top: 3px; }
+.auth-switch { margin: 0; color: #a79e99; text-align: center; font-size: 11px; }
+.auth-switch button { padding: 0; border: 0; background: none; color: var(--color-gold); font-size: inherit; }
+.auth-alert { position: fixed; z-index: 30; right: 18px; bottom: 18px; max-width: min(460px,calc(100vw - 36px)); padding: 12px 16px; border: 1px solid rgba(255,48,61,.38); border-radius: 9px; background: #211313; color: #ffd1d1; font-size: 12px; }
+.account-seller-field { display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 9px 0; color: #a79e99; font-size: 10px; }
+.account-seller-field strong { color: #f0e9e3; font-size: 12px; }
+.account-seller-field small { color: #827973; font-size: 9px; }
+.authenticated-bidder { margin: 0 0 3px; color: #a79e99; font-size: 10px; }
+.authenticated-bidder strong { color: var(--color-gold); }
+.sign-in-prompt { display: grid; gap: 11px; margin-top: 14px; }
+.sign-in-prompt p { margin: 0; color: #b7ada7; font-size: 11px; line-height: 1.6; }
+@media (max-width: 760px) {
+  .main-nav .nav-account { max-width: none; padding: 13px 3px; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .main-nav .nav-account-action { justify-content: flex-start; min-height: 42px; margin-top: 6px; border: 0; border-bottom: 1px solid rgba(255,255,255,.07); border-radius: 0; }
+  .auth-form { padding: 19px 15px; }
+}

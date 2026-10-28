@@ -1,6 +1,7 @@
 
 package com.campusauction.auction;
 
+import com.campusauction.auth.MarketplaceUser;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,14 +42,22 @@ public class AuctionService {
         return auction;
     }
 
-    public Auction createAuction(Auction auction) {
+    public List<Auction> getAuctionsForSeller(Long sellerUserId) {
+        return auctionRepository.findBySeller_IdOrderByIdDesc(sellerUserId);
+    }
+
+    @Transactional
+    public Auction createAuction(AuctionRequest request, MarketplaceUser seller) {
+        Auction auction = request.toAuction(seller);
         validateAuction(auction);
         auction.setStatus("ACTIVE");
         return auctionRepository.save(auction);
     }
 
     @Transactional(rollbackFor = IOException.class)
-    public Auction createAuction(Auction auction, MultipartFile image) throws IOException {
+    public Auction createAuction(AuctionRequest request, MarketplaceUser seller,
+            MultipartFile image) throws IOException {
+        Auction auction = request.toAuction(seller);
         validateAuction(auction);
         auction.setStatus("ACTIVE");
         Auction savedAuction = auctionRepository.save(auction);
@@ -92,7 +101,7 @@ public class AuctionService {
     }
 
     @Transactional
-    public Bid placeBid(Long auctionId, String bidderName, BigDecimal amount) {
+    public Bid placeBid(Long auctionId, MarketplaceUser bidder, BigDecimal amount) {
         Auction auction = auctionRepository.findByIdForUpdate(auctionId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Auction not found"));
@@ -105,11 +114,10 @@ public class AuctionService {
             throw new IllegalArgumentException("Auction has ended");
         }
 
-        if (bidderName == null || bidderName.isBlank()) {
-            throw new IllegalArgumentException("Bidder name is required");
-        }
-
-        if (bidderName.equalsIgnoreCase(auction.getSellerName())) {
+        boolean isSeller = auction.getSellerUserId() != null
+                ? bidder.getId().equals(auction.getSellerUserId())
+                : bidder.getDisplayName().equalsIgnoreCase(auction.getSellerName());
+        if (isSeller) {
             throw new IllegalArgumentException("Sellers cannot bid on their own items");
         }
 
@@ -126,7 +134,7 @@ public class AuctionService {
                     "Minimum bid amount is " + minimum);
         }
 
-        Bid bid = new Bid(auction, bidderName, amount);
+        Bid bid = new Bid(auction, bidder, amount);
         return bidRepository.save(bid);
     }
 

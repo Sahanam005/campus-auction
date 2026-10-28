@@ -1,6 +1,7 @@
 
 package com.campusauction.auction;
 
+import com.campusauction.auth.MarketplaceUser;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -21,6 +22,10 @@ public class Bid {
     @Column(nullable = false)
     private String bidderName;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bidder_user_id")
+    private MarketplaceUser bidder;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
@@ -29,9 +34,10 @@ public class Bid {
     public Bid() {
     }
 
-    public Bid(Auction auction, String bidderName, BigDecimal amount) {
+    public Bid(Auction auction, MarketplaceUser bidder, BigDecimal amount) {
         this.auction = auction;
-        this.bidderName = bidderName;
+        this.bidderName = bidder.getDisplayName();
+        this.bidder = bidder;
         this.amount = amount;
         this.createdAt = LocalDateTime.now();
     }
@@ -47,6 +53,11 @@ public class Bid {
 
     public String getBidderName() {
         return bidderName;
+    }
+
+    @JsonIgnore
+    public Long getBidderUserId() {
+        return bidder == null ? null : bidder.getId();
     }
 
     public BigDecimal getAmount() {
