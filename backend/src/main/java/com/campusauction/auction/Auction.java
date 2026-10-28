@@ -49,10 +49,34 @@ public class Auction {
     @Column(nullable = false, length = 30)
     private String status = "ACTIVE";
 
+    @Column(length = 100)
+    private String winningBidderName;
+
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "winning_bidder_user_id")
+    private MarketplaceUser winningBidder;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal winningBidAmount;
+
+    @Column(length = 200)
+    private String pickupLocation;
+
+    private LocalDateTime pickupTime;
+
+    @Column(length = 1000)
+    private String pickupNotes;
+
+    @Column(length = 30)
+    private String sellerDecision;
+
+    private LocalDateTime handoverConfirmedAt;
+
     @Version
     private Long version;
 
-    protected Auction() {}
+    public Auction() {}
 
     public Long getId() { return id; }
     public String getTitle() { return title; }
@@ -64,9 +88,21 @@ public class Auction {
     public LocalDateTime getClosingTime() { return closingTime; }
     public String getSellerName() { return sellerName; }
     @JsonIgnore
+    public MarketplaceUser getSeller() { return seller; }
+    @JsonIgnore
     public Long getSellerUserId() { return seller == null ? null : seller.getId(); }
     public String getImageUrl() { return imageUrl; }
     public String getStatus() { return status; }
+    public String getWinningBidderName() { return winningBidderName; }
+    @JsonIgnore
+    public MarketplaceUser getWinningBidder() { return winningBidder; }
+    public Long getWinningBidderUserId() { return winningBidder == null ? null : winningBidder.getId(); }
+    public BigDecimal getWinningBidAmount() { return winningBidAmount; }
+    public String getPickupLocation() { return pickupLocation; }
+    public LocalDateTime getPickupTime() { return pickupTime; }
+    public String getPickupNotes() { return pickupNotes; }
+    public String getSellerDecision() { return sellerDecision; }
+    public LocalDateTime getHandoverConfirmedAt() { return handoverConfirmedAt; }
     public Long getVersion() { return version; }
 
     public void setTitle(String v) { title = v; }
@@ -81,4 +117,12 @@ public class Auction {
     public void setSeller(MarketplaceUser v) { seller = v; }
     public void setImageUrl(String v) { imageUrl = v; }
     public void setStatus(String v) { status = v; }
+    public void setWinningBidderName(String v) { winningBidderName = v; }
+    public void setWinningBidder(MarketplaceUser v) { winningBidder = v; }
+    public void setWinningBidAmount(BigDecimal v) { winningBidAmount = v; }
+    public void setPickupLocation(String v) { pickupLocation = v; }
+    public void setPickupTime(LocalDateTime v) { pickupTime = v; }
+    public void setPickupNotes(String v) { pickupNotes = v; }
+    public void setSellerDecision(String v) { sellerDecision = v; }
+    public void setHandoverConfirmedAt(LocalDateTime v) { handoverConfirmedAt = v; }
 }

@@ -1,7 +1,7 @@
 import { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react'
 import {
-  ArrowDownWideNarrow, ArrowLeft, ArrowRight, Bike, BookOpen, Calculator,
-  Check, ChevronDown, Clock3, Laptop, LogOut, Menu, PackageOpen, Search,
+  ArrowDownWideNarrow, ArrowLeft, ArrowRight, Ban, Bell, Bike, BookOpen, Calculator,
+  Check, ChevronDown, Clock3, Edit3, Laptop, LogOut, Menu, PackageOpen, Search,
   ShieldCheck, Sparkles, X, Zap,
 } from 'lucide-react'
 import {
@@ -15,9 +15,15 @@ import { formatPrice } from './formatters.js'
 import useClock from './useClock.js'
 import {
   apiErrorMessage, createAuction, getAuction, getAuctions, getBids,
-  getCurrentUser, getMyAuctions, loginAccount, logoutAccount, placeBid,
+  getCurrentUser, getMyAuctions, getUnreadNotificationCount, loginAccount, logoutAccount, placeBid,
   registerAccount,
 } from './api.js'
+import NotificationsModal from './NotificationsModal.jsx'
+import AiAssistantDrawer from './AiAssistantDrawer.jsx'
+import ListingEditModal from './ListingEditModal.jsx'
+import SellerDecisionPanel from './SellerDecisionPanel.jsx'
+import QuestionsSection from './QuestionsSection.jsx'
+import SavedSearchesSection from './SavedSearchesSection.jsx'
 import './App.css'
 
 const categories = ['Cycles', 'Books', 'Calculators', 'Electronics', 'Other']
@@ -61,7 +67,7 @@ function useAuctionFeed() {
   return { auctions, bidsByAuction, loading, error, refresh: () => setRevision((value) => value + 1) }
 }
 
-function Header({ user, onLogout }) {
+function Header({ user, onLogout, unreadCount, onOpenNotifications, onOpenAssistant }) {
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
   return (
@@ -70,6 +76,15 @@ function Header({ user, onLogout }) {
       <button className="icon-button menu-toggle" type="button" aria-label={open ? 'Close navigation' : 'Open navigation'} aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X size={20} /> : <Menu size={20} />}</button>
       <nav className={`main-nav${open ? ' is-open' : ''}`} aria-label="Main navigation">
         <NavLink to="/marketplace" onClick={close}>Explore</NavLink><a href="/#how-it-works" onClick={close}>How it works</a><NavLink to="/my-auctions" onClick={close}>My auctions</NavLink>
+        <button className="nav-assistant-btn" type="button" onClick={() => { close(); onOpenAssistant() }}>
+          <Sparkles size={14} /> AI Assistant
+        </button>
+        {user && (
+          <button className="nav-icon-badge-btn" type="button" onClick={() => { close(); onOpenNotifications() }} aria-label="Open notifications">
+            <Bell size={17} />
+            {unreadCount > 0 && <span className="unread-badge-count">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+          </button>
+        )}
         {user ? <><span className="nav-account">{user.displayName}</span><button className="nav-account-action" type="button" onClick={() => { close(); onLogout() }}><LogOut size={14} /> Sign out</button></> : <Link className="nav-account-action" to="/account" onClick={close}>Sign in</Link>}
         <Link className="nav-sell" to="/sell" onClick={close}>Sell an item <ArrowRight size={16} /></Link>
       </nav>
@@ -139,7 +154,7 @@ function AuctionGrid({ auctions, bids, loading, error, retry, emptyTitle, emptyT
   return <div className="auction-grid">{auctions.map((auction, index) => <AuctionCard key={auction.id} auction={auction} bids={bids[auction.id] || []} index={index} />)}</div>
 }
 
-function HomePage({ feed }) {
+function HomePage({ feed, onOpenAssistant }) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -173,11 +188,20 @@ function HomePage({ feed }) {
 
     <section className="how-section page-width" id="how-it-works"><div className="how-heading"><span className="eyebrow eyebrow-muted">A BETTER WAY TO PASS IT ON</span><h2>Good deals.<br /><span>Good neighbors.</span></h2><p>Keep useful things in circulation, and keep the handover close to home.</p></div><div className="how-steps"><article className="how-step"><span className="step-number">01</span><div className="step-icon"><Search size={19} /></div><h3>Find your next thing</h3><p>Browse real listings from people around your campus.</p></article><article className="how-step"><span className="step-number">02</span><div className="step-icon"><ArrowDownWideNarrow size={19} /></div><h3>Make a fair bid</h3><p>Every auction shows its current price and minimum next bid.</p></article><article className="how-step"><span className="step-number">03</span><div className="step-icon"><ShieldCheck size={19} /></div><h3>Meet. Swap. Repeat.</h3><p>Arrange a simple campus handover with your seller.</p></article></div></section>
 
-    <section className="assistant-note page-width"><span className="assistant-icon"><Sparkles size={18} /></span><div><strong>Looking for something specific?</strong><p>AI-powered search is planned but isn’t connected yet. For now, try marketplace search and filters.</p></div><Link className="text-link" to="/marketplace">Search items <ArrowRight size={15} /></Link></section>
+    <section className="assistant-note page-width">
+      <span className="assistant-icon"><Sparkles size={18} /></span>
+      <div>
+        <strong>Looking for something specific or need bidding help?</strong>
+        <p>Ask our grounded AI Assistant to find listings within your stated budget and explain campus bidding rules.</p>
+      </div>
+      <button className="button button-primary" type="button" onClick={() => onOpenAssistant()}>
+        Open Assistant <Sparkles size={14} />
+      </button>
+    </section>
   </main>
 }
 
-function MarketplacePage({ feed }) {
+function MarketplacePage({ feed, user }) {
   const [params, setParams] = useSearchParams()
   const [query, setQuery] = useState(params.get('q') || '')
   const [category, setCategory] = useState(params.get('category') || 'All categories')
@@ -213,6 +237,17 @@ function MarketplacePage({ feed }) {
 
   return <main className="page-main page-width"><div className="market-heading"><div><span className="eyebrow eyebrow-muted">THE CAMPUS EXCHANGE</span><h1>Find your <span>next thing.</span></h1><p>Good stuff, going to good homes nearby.</p></div><Link className="button button-primary" to="/sell">List an item <ArrowRight size={16} /></Link></div>
     <form className="market-search" role="search" onSubmit={(event) => event.preventDefault()}><Search size={19} aria-hidden="true" /><label className="visually-hidden" htmlFor="market-search">Search listings</label><input id="market-search" placeholder="Search by item or description" value={query} onChange={(event) => setQuery(event.target.value)} />{query && <button className="clear-search" type="button" onClick={() => setQuery('')} aria-label="Clear search"><X size={16} /></button>}</form>
+
+    <SavedSearchesSection
+      currentUser={user}
+      currentFilter={{ query, category, maxPrice }}
+      onApplySearch={(s) => {
+        if (s.query) setQuery(s.query)
+        if (s.category) changeCategory(s.category)
+        if (s.maxPrice) setMaxPrice(String(s.maxPrice))
+      }}
+    />
+
     <div className="market-layout"><aside className="filter-panel" aria-label="Auction filters"><div className="filter-title"><span>Refine your search</span><button type="button" onClick={reset}>Reset</button></div>
       <label className="filter-label" htmlFor="category-filter">Category</label><select id="category-filter" value={category} onChange={(event) => changeCategory(event.target.value)}><option>All categories</option>{[...new Set([...categories, ...feed.auctions.map((item) => item.category)])].map((item) => <option key={item}>{item}</option>)}</select>
       <label className="filter-label" htmlFor="condition-filter">Condition</label><select id="condition-filter" value={condition} onChange={(event) => setCondition(event.target.value)}><option>All conditions</option>{[...new Set([...conditions, ...feed.auctions.map((item) => item.conditionLabel)])].map((item) => <option key={item}>{item}</option>)}</select>
@@ -223,7 +258,7 @@ function MarketplacePage({ feed }) {
     </section></div></main>
 }
 
-function AuctionDetailPage({ feed, user }) {
+function AuctionDetailPage({ feed, user, onOpenAssistant }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const [auction, setAuction] = useState(null)
@@ -233,21 +268,26 @@ function AuctionDetailPage({ feed, user }) {
   const [amount, setAmount] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
+  const [modalMode, setModalMode] = useState(null)
 
   const refresh = useCallback(async () => {
     try { const [item, history] = await Promise.all([getAuction(id), getBids(id)]); setAuction(item); setBids(history); setError('') }
     catch (requestError) { setError(apiErrorMessage(requestError)) }
     finally { setLoading(false) }
   }, [id])
+
   useEffect(() => {
     const initialRequest = window.setTimeout(refresh, 0)
     const refreshTimer = window.setInterval(refresh, 30000)
     return () => { window.clearTimeout(initialRequest); window.clearInterval(refreshTimer) }
   }, [refresh])
+
   const now = useClock()
   const currentBid = bids[0]?.amount || auction?.startingPrice || 0
   const nextBid = bids.length ? Number(bids[0].amount) + Number(auction?.minIncrement || 0) : Number(auction?.startingPrice || 0)
   const active = auction?.status === 'ACTIVE' && new Date(auction.closingTime).getTime() > now
+  const isOwner = user && auction && auction.sellerUserId && user.id === auction.sellerUserId
+
   const submitBid = async (event) => {
     event.preventDefault(); setMessage('')
     if (Number(amount) < nextBid) { setMessage(`The next valid bid is ${formatPrice(nextBid)} or more.`); return }
@@ -263,11 +303,58 @@ function AuctionDetailPage({ feed, user }) {
   return <main className="page-main page-width detail-page"><button className="back-link" type="button" onClick={() => navigate(-1)}><ArrowLeft size={16} /> Back to the exchange</button><div className="detail-layout">
     <div className="detail-image-wrap"><AuctionImage className="detail-image" src={auction.imageUrl} alt={auction.title} loading="eager" /><span className={`status-pill status-${auction.status.toLowerCase()}`}>{auction.status.replaceAll('_', ' ')}</span></div>
     <div className="detail-copy"><div className="eyebrow eyebrow-muted">{auction.category} <span className="eyebrow-separator">/</span> {auction.conditionLabel}</div><h1>{auction.title}</h1><p className="detail-description">{auction.description}</p><div className="seller-line"><span className="seller-avatar">{auction.sellerName?.slice(0, 1).toUpperCase()}</span><span>Listed by <strong>{auction.sellerName}</strong></span></div>
+
+      {isOwner && (
+        <div className="owner-action-bar">
+          {auction.status === 'ACTIVE' && (
+            <button className="button button-secondary" type="button" onClick={() => setModalMode('edit')}>
+              <Edit3 size={15} /> Edit listing
+            </button>
+          )}
+          {auction.status !== 'CANCELLED' && auction.status !== 'COMPLETED' && (
+            <button className="button button-secondary button-danger-outline" type="button" onClick={() => setModalMode('cancel')}>
+              <Ban size={15} /> Cancel listing
+            </button>
+          )}
+        </div>
+      )}
+
       <section className="bid-panel" aria-label="Place a bid"><div className="bid-panel-top"><span>{bids.length ? 'CURRENT LEADING BID' : 'STARTING PRICE'}</span><span>{bids.length} {bids.length === 1 ? 'bid' : 'bids'}</span></div><div className="bid-price">{formatPrice(currentBid)}</div><div className="next-bid-line">Next valid bid <strong>{formatPrice(nextBid)}</strong></div><div className="detail-countdown"><Clock3 size={16} /><span>{active ? 'Time left' : 'Auction status'}</span><Countdown closingTime={auction.closingTime} status={active ? auction.status : 'ENDED'} /></div>
-        {active && user ? <form className="bid-form" onSubmit={submitBid}><p className="authenticated-bidder">Bidding as <strong>{user.displayName}</strong></p><label htmlFor="bid-amount">Your bid <span>Minimum {formatPrice(nextBid)}</span></label><div className="bid-input-wrap"><span>₹</span><input id="bid-amount" type="number" inputMode="decimal" min={nextBid} step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} placeholder={String(nextBid)} /></div>{message && <p className={`form-message${message.includes('in.') ? ' is-success' : ''}`} role="status">{message}</p>}<button className="button button-primary bid-submit" type="submit" disabled={submitting}>{submitting ? 'Placing bid…' : 'Place bid'} <ArrowRight size={16} /></button><p className="bid-footnote"><ShieldCheck size={14} /> Your bid is public and binding.</p></form> : active ? <div className="sign-in-prompt"><p>Sign in to place a bid. Your account name will be shown in public bid history.</p><Link className="button button-primary" to="/account">Sign in to bid <ArrowRight size={16} /></Link></div> : <p className="ended-note">Bidding has ended for this listing.</p>}
+        {active && (
+          <div className="soft-close-badge">
+            <Zap size={13} /> Anti-sniping protected: bids in final 30s extend auction by 60s
+          </div>
+        )}
+        {active && user ? <form className="bid-form" onSubmit={submitBid}><p className="authenticated-bidder">Bidding as <strong>{user.displayName}</strong></p><label htmlFor="bid-amount">Your bid <span>Minimum {formatPrice(nextBid)}</span></label><div className="bid-input-wrap"><span>₹</span><input id="bid-amount" type="number" inputMode="decimal" min={nextBid} step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} placeholder={String(nextBid)} /></div>{message && <p className={`form-message${message.includes('in.') ? ' is-success' : ''}`} role="status">{message}</p>}<button className="button button-primary bid-submit" type="submit" disabled={submitting}>{submitting ? 'Placing bid…' : 'Place bid'} <ArrowRight size={16} /></button><p className="bid-footnote"><ShieldCheck size={14} /> Your bid is public and binding.</p></form> : active ? <div className="sign-in-prompt"><p>Sign in to place a bid. Your account name will be shown in public bid history.</p><Link className="button button-primary" to="/account">Sign in to bid <ArrowRight size={16} /></Link></div> : null}
       </section>
+
+      <button className="text-link" type="button" style={{ marginTop: '16px' }} onClick={() => onOpenAssistant?.(auction)}>
+        <Sparkles size={14} /> Ask AI Assistant about this item & rules
+      </button>
+
+      <SellerDecisionPanel
+        auction={auction}
+        currentUser={user}
+        onActionComplete={() => { refresh(); feed.refresh() }}
+      />
     </div></div>
+
     <section className="bid-history-section"><div className="section-heading"><div><span className="eyebrow eyebrow-muted">OPEN TO EVERYONE</span><h2>Bid history</h2></div><span className="history-count">{bids.length} {bids.length === 1 ? 'bid' : 'bids'}</span></div>{bids.length ? <div className="bid-history-list">{bids.map((bid) => <article className="bid-history-row" key={bid.id}><span className="bid-history-avatar">{bid.bidderName?.slice(0, 1).toUpperCase()}</span><strong>{bid.bidderName}</strong><time dateTime={bid.createdAt}>{new Date(bid.createdAt).toLocaleString()}</time><b>{formatPrice(bid.amount)}</b></article>)}</div> : <EmptyState title="Make the first move" text={`No bids yet. The opening bid starts at ${formatPrice(auction.startingPrice)}.`} action={false} />}</section>
+
+    <QuestionsSection
+      auctionId={auction.id}
+      sellerUserId={auction.sellerUserId}
+      currentUser={user}
+    />
+
+    <ListingEditModal
+      auction={auction}
+      bidsCount={bids.length}
+      mode={modalMode}
+      isOpen={Boolean(modalMode)}
+      onClose={() => setModalMode(null)}
+      onUpdated={(updated) => { setAuction(updated); feed.refresh() }}
+    />
   </main>
 }
 
@@ -322,6 +409,8 @@ function SellPage({ feed, user }) {
 function MyAuctionsPage({ feed, user }) {
   const [result, setResult] = useState(null)
   const [revision, setRevision] = useState(0)
+  const [modalItem, setModalItem] = useState(null)
+  const [modalMode, setModalMode] = useState('edit')
 
   useEffect(() => {
     let active = true
@@ -335,9 +424,71 @@ function MyAuctionsPage({ feed, user }) {
   if (!user) return <main className="page-main page-width"><div className="state-panel"><div className="state-icon"><ShieldCheck size={19} /></div><div><h3>Sign in to see your auctions</h3><p>Your dashboard is private to your account.</p></div><Link className="button button-primary" to="/account">Sign in <ArrowRight size={16} /></Link></div></main>
 
   const responseIsCurrent = result?.userId === user.id
+  const items = responseIsCurrent ? result.items : []
+
   return <main className="page-main page-width"><div className="market-heading"><div><span className="eyebrow eyebrow-muted">YOUR CORNER OF THE EXCHANGE</span><h1>My <span>auctions.</span></h1><p>Listings owned by {user.displayName}.</p></div><Link className="button button-primary" to="/sell">List an item <ArrowRight size={16} /></Link></div>
-    <AuctionGrid auctions={responseIsCurrent ? result.items : []} bids={feed.bidsByAuction} loading={!responseIsCurrent} error={responseIsCurrent ? result.error : ''} retry={() => setRevision((value) => value + 1)} emptyTitle="You haven’t listed anything yet" emptyText="Your items will appear here after you publish a listing." />
-    <div className="capability-note"><span className="step-icon"><Check size={17} /></span><p>Seller identity and listing access are account-based. Editing and cancellation will be added in the next milestone.</p></div>
+    {responseIsCurrent && items.length > 0 && (
+      <div className="my-auctions-dashboard-list">
+        {items.map((item) => (
+          <article key={item.id} className="my-auction-row-card">
+            <div className="my-auction-row-thumb">
+              <AuctionImage src={item.imageUrl} alt={item.title} />
+              <span className={`status-pill status-${item.status.toLowerCase()}`}>{item.status.replaceAll('_', ' ')}</span>
+            </div>
+            <div className="my-auction-row-details">
+              <Link to={`/auctions/${item.id}`} className="my-auction-title-link">
+                <h3>{item.title}</h3>
+              </Link>
+              <div className="my-auction-meta-line">
+                <span>Category: <strong>{item.category}</strong></span>
+                <span>Starting: <strong>{formatPrice(item.startingPrice)}</strong></span>
+                <span>Min Step: <strong>{formatPrice(item.minIncrement)}</strong></span>
+              </div>
+              <div className="my-auction-status-line">
+                <Countdown closingTime={item.closingTime} status={item.status} compact />
+                {item.winningBidderName && <span>· Leading: <strong>{item.winningBidderName}</strong> ({formatPrice(item.winningBidAmount || 0)})</span>}
+              </div>
+            </div>
+            <div className="my-auction-row-actions">
+              <Link to={`/auctions/${item.id}`} className="button button-secondary">
+                View & Manage
+              </Link>
+              {item.status === 'ACTIVE' && (
+                <button
+                  className="button button-secondary"
+                  type="button"
+                  onClick={() => { setModalItem(item); setModalMode('edit') }}
+                >
+                  <Edit3 size={14} /> Edit
+                </button>
+              )}
+              {item.status !== 'CANCELLED' && item.status !== 'COMPLETED' && (
+                <button
+                  className="button button-secondary button-danger-outline"
+                  type="button"
+                  onClick={() => { setModalItem(item); setModalMode('cancel') }}
+                >
+                  <Ban size={14} /> Cancel
+                </button>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    )}
+
+    {responseIsCurrent && items.length === 0 && (
+      <EmptyState title="You haven’t listed anything yet" text="Your items will appear here after you publish a listing." />
+    )}
+
+    <ListingEditModal
+      auction={modalItem}
+      bidsCount={feed.bidsByAuction[modalItem?.id]?.length || 0}
+      mode={modalMode}
+      isOpen={Boolean(modalItem)}
+      onClose={() => setModalItem(null)}
+      onUpdated={() => { setRevision((v) => v + 1); feed.refresh() }}
+    />
   </main>
 }
 
@@ -346,6 +497,32 @@ function NotFoundPage() { return <main className="page-main page-width not-found
 function AppLayout({ feed, user, authLoading, refreshUser }) {
   const navigate = useNavigate()
   const [logoutError, setLogoutError] = useState('')
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const [assistantAuction, setAssistantAuction] = useState(null)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  const refreshUnread = useCallback(async () => {
+    if (!user) { setUnreadCount(0); return }
+    try {
+      const count = await getUnreadNotificationCount()
+      setUnreadCount(count)
+    } catch (e) {
+      console.error(e)
+    }
+  }, [user])
+
+  useEffect(() => {
+    refreshUnread()
+    const timer = setInterval(refreshUnread, 30000)
+    return () => clearInterval(timer)
+  }, [refreshUnread])
+
+  const openAssistantWithItem = (auctionItem = null) => {
+    setAssistantAuction(auctionItem)
+    setAssistantOpen(true)
+  }
+
   const signOut = async () => {
     setLogoutError('')
     try {
@@ -356,7 +533,43 @@ function AppLayout({ feed, user, authLoading, refreshUser }) {
       setLogoutError(apiErrorMessage(requestError))
     }
   }
-  return <div className="app-shell"><Header user={user} onLogout={signOut} />{logoutError && <div className="auth-alert" role="alert">{logoutError}</div>}<Routes><Route path="/" element={<HomePage feed={feed} />} /><Route path="/marketplace" element={<MarketplacePage feed={feed} />} /><Route path="/auctions/:id" element={<AuctionDetailPage feed={feed} user={user} />} /><Route path="/account" element={<AccountPage user={user} onAuthenticated={refreshUser} />} /><Route path="/sell" element={authLoading ? <main className="page-main page-width"><div className="detail-skeleton" /></main> : <SellPage feed={feed} user={user} />} /><Route path="/my-auctions" element={authLoading ? <main className="page-main page-width"><div className="detail-skeleton" /></main> : <MyAuctionsPage feed={feed} user={user} />} /><Route path="*" element={<NotFoundPage />} /></Routes><Footer /></div>
+
+  return (
+    <div className="app-shell">
+      <Header
+        user={user}
+        onLogout={signOut}
+        unreadCount={unreadCount}
+        onOpenNotifications={() => setNotificationsOpen(true)}
+        onOpenAssistant={() => openAssistantWithItem()}
+      />
+      {logoutError && <div className="auth-alert" role="alert">{logoutError}</div>}
+      <Routes>
+        <Route path="/" element={<HomePage feed={feed} onOpenAssistant={openAssistantWithItem} />} />
+        <Route path="/marketplace" element={<MarketplacePage feed={feed} user={user} />} />
+        <Route path="/auctions/:id" element={<AuctionDetailPage feed={feed} user={user} onOpenAssistant={openAssistantWithItem} />} />
+        <Route path="/account" element={<AccountPage user={user} onAuthenticated={refreshUser} />} />
+        <Route path="/sell" element={authLoading ? <main className="page-main page-width"><div className="detail-skeleton" /></main> : <SellPage feed={feed} user={user} />} />
+        <Route path="/my-auctions" element={authLoading ? <main className="page-main page-width"><div className="detail-skeleton" /></main> : <MyAuctionsPage feed={feed} user={user} onOpenAssistant={openAssistantWithItem} />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+      <Footer />
+
+      <NotificationsModal
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        onCountChange={setUnreadCount}
+      />
+
+      <AiAssistantDrawer
+        isOpen={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        user={user}
+        onBidPlaced={() => feed.refresh()}
+        initialAuction={assistantAuction}
+      />
+    </div>
+  )
 }
 
 function App() {

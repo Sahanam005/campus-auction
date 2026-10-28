@@ -68,6 +68,9 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/csrf", "/api/auth/register", "/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/**").authenticated()
+                        .requestMatchers("/api/notifications/**").authenticated()
+                        .requestMatchers("/api/saved-searches/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/assistant/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auctions/mine").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auctions/**").authenticated()

@@ -56,6 +56,11 @@ public class Bid {
     }
 
     @JsonIgnore
+    public MarketplaceUser getBidder() {
+        return bidder;
+    }
+
+    @JsonIgnore
     public Long getBidderUserId() {
         return bidder == null ? null : bidder.getId();
     }

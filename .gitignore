@@ -21,3 +21,4 @@
 **/coverage/
 *.log
 npm-debug.log*
+conversation-transcript.txt

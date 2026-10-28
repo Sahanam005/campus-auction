@@ -52,6 +52,71 @@ export const placeBid = async (id, amount) => {
   await ensureCsrfToken()
   return postWithCsrf(`/auctions/${id}/bids`, { amount })
 }
+export const updateAuction = async (id, auction) => {
+  await ensureCsrfToken()
+  return (await api.put(`/auctions/${id}`, auction, {
+    headers: { 'X-CSRF-TOKEN': csrfToken },
+  })).data
+}
+export const cancelAuction = async (id, reason) => {
+  await ensureCsrfToken()
+  return postWithCsrf(`/auctions/${id}/cancel`, { reason })
+}
+export const approveWinner = async (id, pickupDetails) => {
+  await ensureCsrfToken()
+  return postWithCsrf(`/auctions/${id}/approve`, pickupDetails)
+}
+export const rejectWinner = async (id, reason) => {
+  await ensureCsrfToken()
+  return postWithCsrf(`/auctions/${id}/reject`, { reason })
+}
+export const schedulePickup = async (id, pickupDetails) => {
+  await ensureCsrfToken()
+  return postWithCsrf(`/auctions/${id}/pickup`, pickupDetails)
+}
+export const confirmHandover = async (id) => {
+  await ensureCsrfToken()
+  return postWithCsrf(`/auctions/${id}/handover`)
+}
+export const recordFailedPickup = async (id, reason) => {
+  await ensureCsrfToken()
+  return postWithCsrf(`/auctions/${id}/pickup-failed`, { reason })
+}
+
+export const getNotifications = async () => (await api.get('/notifications')).data
+export const getUnreadNotificationCount = async () => (await api.get('/notifications/unread-count')).data?.unreadCount || 0
+export const markNotificationRead = async (id) => {
+  await ensureCsrfToken()
+  return (await api.patch(`/notifications/${id}/read`, {}, { headers: { 'X-CSRF-TOKEN': csrfToken } })).data
+}
+export const markAllNotificationsRead = async () => {
+  await ensureCsrfToken()
+  return postWithCsrf('/notifications/mark-all-read')
+}
+
+export const getSavedSearches = async () => (await api.get('/saved-searches')).data
+export const createSavedSearch = async (search) => {
+  await ensureCsrfToken()
+  return postWithCsrf('/saved-searches', search)
+}
+export const deleteSavedSearch = async (id) => {
+  await ensureCsrfToken()
+  return (await api.delete(`/saved-searches/${id}`, { headers: { 'X-CSRF-TOKEN': csrfToken } })).data
+}
+
+export const getAuctionQuestions = async (id) => (await api.get(`/auctions/${id}/questions`)).data
+export const askAuctionQuestion = async (id, questionText) => {
+  await ensureCsrfToken()
+  return postWithCsrf(`/auctions/${id}/questions`, { questionText })
+}
+export const answerAuctionQuestion = async (id, questionId, answerText) => {
+  await ensureCsrfToken()
+  return postWithCsrf(`/auctions/${id}/questions/${questionId}/answer`, { answerText })
+}
+
+export const chatWithAssistant = async (message, statedBudget, contextAuctionId) => {
+  return (await api.post('/assistant/chat', { message, statedBudget, contextAuctionId })).data
+}
 
 export function resolveImageUrl(imageUrl) {
   if (!imageUrl || /(?:placehold\.co|via\.placeholder\.com)/i.test(imageUrl)) return ''
