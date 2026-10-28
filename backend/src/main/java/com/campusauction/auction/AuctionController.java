@@ -6,10 +6,13 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -38,6 +41,14 @@ public class AuctionController {
     @ResponseStatus(HttpStatus.CREATED)
     public Auction createAuction(@Valid @RequestBody Auction auction) {
         return auctionService.createAuction(auction);
+    }
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public Auction createAuctionWithImage(
+            @Valid @RequestPart("auction") Auction auction,
+            @RequestPart("image") MultipartFile image) throws IOException {
+        return auctionService.createAuction(auction, image);
     }
 
     @GetMapping("/{id}/bids")

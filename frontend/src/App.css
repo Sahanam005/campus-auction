@@ -87,7 +87,5 @@
   .form-grid { grid-template-columns: 1fr; gap: 14px; }.form-grid .field-full { grid-column: auto; }.form-actions { align-items: stretch; flex-direction: column; }.form-actions .button { width: 100%; }.seller-match-form { grid-template-columns: 1fr; }.seller-match-form label,.seller-match-form input,.seller-match-form .button { grid-column: 1; }.bid-history-row { gap: 7px; }
 }
 
-.auction-card-image > .image-fallback { position: absolute; z-index: 0; inset: 0; }
 .auction-card-image > img { position: relative; z-index: 1; }
-.detail-fallback { position: absolute; z-index: 0; inset: 0; min-height: 0; }
 .detail-image { z-index: 1; }

@@ -22,4 +22,6 @@ npm run build
 npm run lint
 ```
 
-Listings and bid history are loaded from the Spring Boot API. Auction creation and bid submission are persisted by the backend to MySQL. The home-page hero uses muted, looping campus footage from [Pexels](https://www.pexels.com/video/entrance-to-high-point-university-13638410/), with a still poster and reduced-motion behavior as fallbacks.
+Listings and bid history are loaded from the Spring Boot API. Auction creation and bid submission are persisted by the backend to MySQL. Optional JPEG and PNG listing photos (up to 5 MB) are uploaded with the listing and stored by the backend under `${user.home}/.campus-auction/images` by default; set `IMAGE_STORAGE_DIR` to use another persistent directory. The photo key is stored with the listing in MySQL and served from `/api/images/{imageKey}`. Keep the image directory with the database when backing up or moving the application.
+
+The home-page hero uses muted, looping campus footage from [Pexels](https://www.pexels.com/video/entrance-to-high-point-university-13638410/), with a still poster and reduced-motion behavior as fallbacks.

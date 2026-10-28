@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react'
 import {
   ArrowDownWideNarrow, ArrowLeft, ArrowRight, Bike, BookOpen, Calculator,
   Check, ChevronDown, Clock3, Laptop, Menu, PackageOpen, Search, ShieldCheck,
@@ -9,6 +9,7 @@ import {
   useSearchParams,
 } from 'react-router-dom'
 import AuctionCard from './AuctionCard.jsx'
+import AuctionImage from './AuctionImage.jsx'
 import Countdown from './Countdown.jsx'
 import { formatPrice } from './formatters.js'
 import useClock from './useClock.js'
@@ -220,7 +221,7 @@ function AuctionDetailPage({ feed }) {
   if (error || !auction) return <main className="page-main page-width"><div className="state-panel state-error"><div className="state-icon"><Zap size={19} /></div><div><h3>Listing unavailable</h3><p>{error || 'This auction could not be found.'}</p></div><Link className="button button-secondary" to="/marketplace">Back to auctions</Link></div></main>
 
   return <main className="page-main page-width detail-page"><button className="back-link" type="button" onClick={() => navigate(-1)}><ArrowLeft size={16} /> Back to the exchange</button><div className="detail-layout">
-    <div className="detail-image-wrap"><div className="image-fallback detail-fallback"><PackageOpen size={44} /></div>{auction.imageUrl && !/(?:placehold\.co|via\.placeholder\.com)/i.test(auction.imageUrl) && <img className="detail-image" src={auction.imageUrl} alt={auction.title} onError={(event) => { event.currentTarget.hidden = true }} />}<span className={`status-pill status-${auction.status.toLowerCase()}`}>{auction.status.replaceAll('_', ' ')}</span></div>
+    <div className="detail-image-wrap"><AuctionImage className="detail-image" src={auction.imageUrl} alt={auction.title} loading="eager" /><span className={`status-pill status-${auction.status.toLowerCase()}`}>{auction.status.replaceAll('_', ' ')}</span></div>
     <div className="detail-copy"><div className="eyebrow eyebrow-muted">{auction.category} <span className="eyebrow-separator">/</span> {auction.conditionLabel}</div><h1>{auction.title}</h1><p className="detail-description">{auction.description}</p><div className="seller-line"><span className="seller-avatar">{auction.sellerName?.slice(0, 1).toUpperCase()}</span><span>Listed by <strong>{auction.sellerName}</strong></span></div>
       <section className="bid-panel" aria-label="Place a bid"><div className="bid-panel-top"><span>{bids.length ? 'CURRENT LEADING BID' : 'STARTING PRICE'}</span><span>{bids.length} {bids.length === 1 ? 'bid' : 'bids'}</span></div><div className="bid-price">{formatPrice(currentBid)}</div><div className="next-bid-line">Next valid bid <strong>{formatPrice(nextBid)}</strong></div><div className="detail-countdown"><Clock3 size={16} /><span>{active ? 'Time left' : 'Auction status'}</span><Countdown closingTime={auction.closingTime} status={active ? auction.status : 'ENDED'} /></div>
         {active ? <form className="bid-form" onSubmit={submitBid}><label htmlFor="bidder-name">Your name</label><input id="bidder-name" autoComplete="name" required maxLength="100" value={bidderName} onChange={(event) => setBidderName(event.target.value)} placeholder="Name shown with your bid" /><label htmlFor="bid-amount">Your bid <span>Minimum {formatPrice(nextBid)}</span></label><div className="bid-input-wrap"><span>₹</span><input id="bid-amount" type="number" inputMode="decimal" min={nextBid} step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} placeholder={String(nextBid)} /></div>{message && <p className={`form-message${message.includes('in.') ? ' is-success' : ''}`} role="status">{message}</p>}<button className="button button-primary bid-submit" type="submit" disabled={submitting}>{submitting ? 'Placing bid…' : 'Place bid'} <ArrowRight size={16} /></button><p className="bid-footnote"><ShieldCheck size={14} /> Your bid is public and binding.</p></form> : <p className="ended-note">Bidding has ended for this listing.</p>}
@@ -234,13 +235,29 @@ function SellPage({ feed }) {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState('')
+  const imagePreviewRef = useRef('')
   const now = useClock()
-  const [form, setForm] = useState({ title: '', category: 'Electronics', conditionLabel: 'Good', description: '', startingPrice: '', minIncrement: '25', closingTime: '', sellerName: localStorage.getItem('campusAuctionBidderName') || '', imageUrl: '' })
+  const [form, setForm] = useState({ title: '', category: 'Electronics', conditionLabel: 'Good', description: '', startingPrice: '', minIncrement: '25', closingTime: '', sellerName: localStorage.getItem('campusAuctionBidderName') || '' })
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
+  useEffect(() => {
+    return () => {
+      if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current)
+    }
+  }, [])
+  const selectImage = (event) => {
+    const selectedFile = event.target.files?.[0] || null
+    if (imagePreviewRef.current) URL.revokeObjectURL(imagePreviewRef.current)
+    imagePreviewRef.current = selectedFile ? URL.createObjectURL(selectedFile) : ''
+    setImagePreview(imagePreviewRef.current)
+    setImageFile(selectedFile)
+  }
   const submit = async (event) => {
     event.preventDefault(); setError(''); setSubmitting(true)
     try {
-      const created = await createAuction({ ...form, startingPrice: Number(form.startingPrice), minIncrement: Number(form.minIncrement), closingTime: form.closingTime.length === 16 ? `${form.closingTime}:00` : form.closingTime, imageUrl: form.imageUrl.trim() || null })
+      if (imageFile && imageFile.size > 5 * 1024 * 1024) throw new Error('Choose an image smaller than 5 MB.')
+      const created = await createAuction({ ...form, startingPrice: Number(form.startingPrice), minIncrement: Number(form.minIncrement), closingTime: form.closingTime.length === 16 ? `${form.closingTime}:00` : form.closingTime }, imageFile)
       localStorage.setItem('campusAuctionBidderName', form.sellerName.trim()); feed.refresh(); navigate(`/auctions/${created.id}`)
     } catch (requestError) { setError(apiErrorMessage(requestError)) }
     finally { setSubmitting(false) }
@@ -251,8 +268,8 @@ function SellPage({ feed }) {
       <label className="field-full">Item title<input required maxLength="150" value={form.title} onChange={update('title')} placeholder="e.g. Scientific calculator, barely used" /></label>
       <label>Category<select value={form.category} onChange={update('category')}>{categories.map((item) => <option key={item}>{item}</option>)}</select></label><label>Condition<select value={form.conditionLabel} onChange={update('conditionLabel')}>{conditions.map((item) => <option key={item}>{item}</option>)}</select></label>
       <label className="field-full">Description<textarea required maxLength="2000" rows="4" value={form.description} onChange={update('description')} placeholder="What should a new owner know? Mention wear, included parts, or useful details." /></label>
-      <label className="field-full">Photo URL <span className="field-optional">Optional · uploads aren’t supported yet</span><input type="url" maxLength="500" value={form.imageUrl} onChange={update('imageUrl')} placeholder="https://…" /></label>
-      {form.imageUrl && <div className="image-preview"><img src={form.imageUrl} alt="Listing photo preview" onError={(event) => { event.currentTarget.hidden = true }} /><span>Photo preview</span></div>}
+      <label className="field-full">Item photo <span className="field-optional">Optional · JPEG or PNG, up to 5 MB</span><input type="file" accept="image/jpeg,image/png" onChange={selectImage} /></label>
+      {imagePreview && <div className="image-preview"><AuctionImage className="image-preview-thumbnail" src={imagePreview} alt="Listing photo preview" loading="eager" /><span>{imageFile?.name}</span></div>}
     </div><div className="form-section-title"><span>02</span><div><h2>The auction</h2><p>Choose your opening price and the minimum step between bids.</p></div></div><div className="form-grid">
       <label>Starting price<input required type="number" min="0.01" step="0.01" inputMode="decimal" value={form.startingPrice} onChange={update('startingPrice')} placeholder="₹ 250" /></label><label>Minimum increment<input required type="number" min="0.01" step="0.01" inputMode="decimal" value={form.minIncrement} onChange={update('minIncrement')} /></label>
       <label>Closing date & time<input required type="datetime-local" min={now ? new Date(now + 60000).toISOString().slice(0, 16) : undefined} value={form.closingTime} onChange={update('closingTime')} /></label><label>Seller name<input required maxLength="100" value={form.sellerName} onChange={update('sellerName')} placeholder="Name shown on your listing" /></label>

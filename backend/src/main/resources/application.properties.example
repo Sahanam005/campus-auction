@@ -11,4 +11,9 @@ spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=false
 spring.jpa.open-in-view=false
 
-server.error.include-message=always
+spring.web.error.include-message=always
+
+spring.servlet.multipart.max-file-size=5MB
+spring.servlet.multipart.max-request-size=6MB
+
+campus-auction.image-storage-dir=${IMAGE_STORAGE_DIR:${user.home}/.campus-auction/images}

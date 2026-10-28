@@ -5,6 +5,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,12 +17,15 @@ public class AuctionService {
 
     private final AuctionRepository auctionRepository;
     private final BidRepository bidRepository;
+    private final AuctionImageStorage imageStorage;
 
     public AuctionService(
             AuctionRepository auctionRepository,
-            BidRepository bidRepository) {
+            BidRepository bidRepository,
+            AuctionImageStorage imageStorage) {
         this.auctionRepository = auctionRepository;
         this.bidRepository = bidRepository;
+        this.imageStorage = imageStorage;
     }
 
     public List<Auction> getAllAuctions() {
@@ -36,6 +42,34 @@ public class AuctionService {
     }
 
     public Auction createAuction(Auction auction) {
+        validateAuction(auction);
+        auction.setStatus("ACTIVE");
+        return auctionRepository.save(auction);
+    }
+
+    @Transactional(rollbackFor = IOException.class)
+    public Auction createAuction(Auction auction, MultipartFile image) throws IOException {
+        validateAuction(auction);
+        auction.setStatus("ACTIVE");
+        Auction savedAuction = auctionRepository.save(auction);
+        if (image != null && !image.isEmpty()) {
+            String imageKey = imageStorage.store(image);
+            try {
+                savedAuction.setImageUrl("/api/images/" + imageKey);
+                return auctionRepository.save(savedAuction);
+            } catch (RuntimeException exception) {
+                try {
+                    imageStorage.delete(imageKey);
+                } catch (IOException cleanupException) {
+                    exception.addSuppressed(cleanupException);
+                }
+                throw exception;
+            }
+        }
+        return auctionRepository.save(savedAuction);
+    }
+
+    private void validateAuction(Auction auction) {
         if (auction.getTitle() == null || auction.getTitle().isBlank()) {
             throw new IllegalArgumentException("Title is required");
         }
@@ -55,8 +89,6 @@ public class AuctionService {
             throw new IllegalArgumentException("Closing time must be in the future");
         }
 
-        auction.setStatus("ACTIVE");
-        return auctionRepository.save(auction);
     }
 
     @Transactional
