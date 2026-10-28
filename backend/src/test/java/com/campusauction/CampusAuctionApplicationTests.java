@@ -3,7 +3,6 @@ package com.campusauction;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -85,6 +84,15 @@ class CampusAuctionApplicationTests {
 				.content(objectMapper.writeValueAsString(invalidBidRequest)))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").exists());
+	}
+
+	@Test
+	void missingAuctionsReturnNotFound() throws Exception {
+		mockMvc.perform(get("/api/auctions/999999999"))
+				.andExpect(status().isNotFound());
+
+		mockMvc.perform(get("/api/auctions/999999999/bids"))
+				.andExpect(status().isNotFound());
 	}
 
 }

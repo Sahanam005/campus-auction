@@ -54,12 +54,12 @@ public class AuctionController {
                 id, request.bidderName(), request.amount());
     }
 
-        @ExceptionHandler(IllegalArgumentException.class)
-        public ResponseEntity<Map<String, String>> handleInvalidRequest(
-                IllegalArgumentException exception) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("message", exception.getMessage()));
-        }
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidRequest(
+            IllegalArgumentException exception) {
+        return ResponseEntity.badRequest()
+                .body(Map.of("message", exception.getMessage()));
+    }
 
     public record BidRequest(
             @NotBlank String bidderName,

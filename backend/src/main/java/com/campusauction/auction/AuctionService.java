@@ -1,8 +1,10 @@
 
 package com.campusauction.auction;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,7 +29,8 @@ public class AuctionService {
 
     public Auction getAuction(Long id) {
         Auction auction = auctionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Auction not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Auction not found"));
         closeIfExpired(auction);
         return auction;
     }
@@ -59,7 +62,8 @@ public class AuctionService {
     @Transactional
     public Bid placeBid(Long auctionId, String bidderName, BigDecimal amount) {
         Auction auction = auctionRepository.findByIdForUpdate(auctionId)
-                .orElseThrow(() -> new RuntimeException("Auction not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Auction not found"));
 
         if (auction.getClosingTime().isBefore(LocalDateTime.now())
                 || auction.getStatus().equals("ENDED_PENDING_SELLER")
@@ -95,6 +99,10 @@ public class AuctionService {
     }
 
     public List<Bid> getBids(Long auctionId) {
+        if (!auctionRepository.existsById(auctionId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Auction not found");
+        }
         return bidRepository.findByAuctionIdOrderByCreatedAtDesc(auctionId);
     }
 
